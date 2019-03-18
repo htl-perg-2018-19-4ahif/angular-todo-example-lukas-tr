@@ -1,0 +1,21 @@
+<h1 mat-dialog-title>Todo</h1>
+<div mat-dialog-content>
+
+  <mat-form-field>
+    <input required placeholder="adf" matInput [(ngModel)]="data.todo.description" />
+  </mat-form-field>
+
+  <mat-checkbox [(ngModel)]="data.todo.done">Done</mat-checkbox>
+
+  <mat-form-field>
+    <mat-select [(value)]="data.todo.assignedTo" placeholder="Assign to">
+      <mat-option>Nobody</mat-option>
+      <mat-option *ngFor="let person of data.people" [value]="person.name">{{ person.name }}</mat-option>
+    </mat-select>
+  </mat-form-field>
+
+</div>
+<div mat-dialog-actions>
+  <button mat-button (click)="onNoClick()">Cancel</button>
+  <button mat-button [mat-dialog-close]="data" cdkFocusInitial [disabled]="!data.todo.description">Submit</button>
+</div>

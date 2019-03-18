@@ -1,0 +1,45 @@
+<!--The content below is only a placeholder and can be replaced.-->
+
+<small>
+  API should be available at <code>http://localhost:8080/</code> or
+  <code>http://localhost:3010/</code>
+</small>
+
+<div>
+
+  <mat-form-field>
+    <mat-select [(value)]="doneFilter" placeholder="Filter by done">
+      <mat-option value="all">Done and ongoing</mat-option>
+      <mat-option value="done">Done</mat-option>
+      <mat-option value="ongoing">Ongoing</mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field>
+    <mat-select [(value)]="personFilter" placeholder="Filter by person">
+      <mat-option>None</mat-option>
+      <mat-option *ngFor="let person of people" [value]="person.name">{{ person.name }}</mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <button mat-raised-button (click)="openDialog()">new todo</button>
+  <button mat-raised-button (click)="fetchPeople()">refresh people</button>
+  <button mat-raised-button (click)="fetchTodos()">refresh todos</button>
+
+</div>
+
+<mat-card *ngFor="let todo of filteredTodos" class="example-card" style="margin: 8px;">
+  <mat-card-header>
+    <mat-card-title>{{ todo.assignedTo || "No assignee" }}</mat-card-title>
+    <mat-card-subtitle>{{ todo.done ? "Done" : "Not Done" }}</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    <p>
+      {{ todo.description }}
+    </p>
+  </mat-card-content>
+  <mat-card-actions>
+    <button mat-button (click)="openDialog(todo)">Edit</button>
+    <button mat-button (click)="deleteTodo(todo)">Delete</button>
+  </mat-card-actions>
+</mat-card>
