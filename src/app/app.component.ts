@@ -2,6 +2,8 @@ import { Component, OnInit } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
 import { MatDialog } from "@angular/material";
 import { EditDialogComponent } from "./edit-dialog/edit-dialog.component";
+import { retry, take, concatMap } from "rxjs/operators";
+import { range, Observable } from "rxjs";
 
 export interface IToDo {
   id?: number;
@@ -26,6 +28,12 @@ enum DoneFilter {
   styleUrls: ["./app.component.scss"]
 })
 export class AppComponent implements OnInit {
+  /** URLs that we want to try one after the other */
+  private static readonly baseUrls = [
+    "http://localhost:8080/api",
+    "http://localhost:8080/api"
+  ];
+
   todos: IToDo[] = [];
   people: IPerson[] = [];
   doneFilter = DoneFilter.all;
@@ -78,59 +86,44 @@ export class AppComponent implements OnInit {
     this.fetchTodos();
   }
 
+  private executeWithUrlFallback<T>(httpCall: (baseUrl: string) => Observable<T>): Observable<T> {
+    // Index in AppComponent.baseUrls referencing the current URL to try
+    let baseUrlIx = 0;
+
+    // Range returns an observable with one element per entry in AppComponent.baseUrls
+    return range(0, AppComponent.baseUrls.length).pipe(
+      concatMap(_ =>
+        // Try current URL and increment index after trying
+        httpCall(AppComponent.baseUrls[baseUrlIx++])),
+      // Retry as long as we have additional URLs
+      retry(AppComponent.baseUrls.length - 1),
+      // Stop after first successfull API call
+      take(1)
+    );
+  }
+
   fetchTodos() {
-    this.http.get<IToDo[]>("http://localhost:8080/api/todos").subscribe(
-      todos => {
-        this.todos = todos;
-      },
-      error => {
-        this.http.get<IToDo[]>("http://localhost:3010/api/todos").subscribe(
-          todos => {
-            this.todos = todos;
-          },
-          error2 => {
-            alert(error.message || error);
-          }
-        );
-      }
+    this.executeWithUrlFallback(baseUrl => this.http.get<IToDo[]>(`${baseUrl}/todos`))
+    // Note that we could get rid of subscribe by using Angular's async pipe
+    .subscribe(
+      todos => this.todos = todos,
+      error => alert(error.message || error)
     );
   }
 
   fetchPeople() {
-    this.http.get<IPerson[]>("http://localhost:8080/api/people").subscribe(
-      people => {
-        this.people = people;
-      },
-      error => {
-        this.http.get<IPerson[]>("http://localhost:3010/api/people").subscribe(
-          people => {
-            this.people = people;
-          },
-          error2 => {
-            alert(error.message || error);
-          }
-        );
-      }
+    this.executeWithUrlFallback(baseUrl => this.http.get<IPerson[]>(`${baseUrl}/people`))
+    .subscribe(
+      people => this.people = people,
+      error => alert(error.message || error)
     );
   }
 
   createTodo(todo: IToDo) {
-    this.http.post<IToDo>("http://localhost:8080/api/todos", todo).subscribe(
-      newTodo => {
-        this.todos.push(newTodo);
-      },
-      error => {
-        this.http
-          .post<IToDo>("http://localhost:3010/api/todos", todo)
-          .subscribe(
-            newTodo => {
-              this.todos.push(newTodo);
-            },
-            error2 => {
-              alert(error.message || error);
-            }
-          );
-      }
+    this.executeWithUrlFallback(baseUrl => this.http.post<IToDo>(`${baseUrl}/todos`, todo))
+    .subscribe(
+      newTodo => this.todos.push(newTodo),
+      error => alert(error.message || error)
     );
   }
 
@@ -150,7 +143,7 @@ export class AppComponent implements OnInit {
                   t.id === todo.id ? newTodo : t
                 );
               },
-              error2 => {
+              () => {
                 alert(error.message || error);
               }
             );
@@ -170,7 +163,7 @@ export class AppComponent implements OnInit {
             () => {
               this.todos = this.todos.filter(t => t.id !== todo.id);
             },
-            error2 => {
+            () => {
               alert(error.message || error);
             }
           );
